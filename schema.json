@@ -1,0 +1,24 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["action", "confidence", "reason", "body"],
+  "properties": {
+    "action": {
+      "type": "string",
+      "enum": ["none", "comment", "pr"],
+      "description": "none: stay silent. comment: post body as a comment. pr: propose a draft pull request, body describing the fix."
+    },
+    "confidence": {
+      "type": "string",
+      "enum": ["low", "medium", "high"]
+    },
+    "reason": {
+      "type": "string",
+      "description": "Why this action, for the maintainer only, never posted."
+    },
+    "body": {
+      "type": "string",
+      "description": "The public comment (comment) or the fix plan (pr). Empty for none."
+    }
+  }
+}
