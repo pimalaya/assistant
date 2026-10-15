@@ -91,7 +91,7 @@ propose() {
       "Bash(gh search issues:*)" "Bash(gh search prs:*)" "Bash(git log:*)" \
     --disallowedTools "Edit" "Write" "NotebookEdit" "WebFetch" "WebSearch" \
     --max-budget-usd "${MAX_BUDGET_USD:-1}" \
-    --no-session-persistence) \
+    --no-session-persistence </dev/null) \
     | jq '.structured_output // (.result | fromjson? // empty)'
 }
 
@@ -141,7 +141,7 @@ search_discussions() {
     }' --jq '.data.search.nodes[] | select(.closed | not) | {number, url, author: .author.login, kind: "discussion"}'
 }
 
-footer=$'\n\n---\n_I am the Pimalaya Assistant, an automated helper. A maintainer will follow up._'
+footer=$'\n\n---\n\n_🤖 I\'m the Pimalaya Assistant, I try to help humans solve issues around the Pimalaya project. [Why am I here?](https://github.com/pimalaya/.github/blob/master/MAINTAINING.md#assistant)_'
 
 post_comment() {
   local repo=$1 number=$2 body=$3
@@ -173,7 +173,9 @@ record() {
   {
     printf '## %s\n\n' "$url"
     printf -- '- outcome: %s\n' "$outcome"
-    jq -r '"- action: \(.action) (\(.confidence))\n- reason: \(.reason)\n\n\(.body)\n"' <<<"$proposal"
+    jq -r '"- action: \(.action) (\(.confidence))\n- reason: \(.reason)\n"
+      + (if .verdict != "n/a" then "- verdict: \(.verdict)\n\n\(.review)\n" else "" end)
+      + "\n\(.body)\n"' <<<"$proposal"
   } >>"$LOG"
 }
 

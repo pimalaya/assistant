@@ -1,16 +1,31 @@
 {
   "type": "object",
   "additionalProperties": false,
-  "required": ["action", "confidence", "reason", "body"],
+  "required": [
+    "action",
+    "confidence",
+    "reason",
+    "body",
+    "verdict",
+    "review"
+  ],
   "properties": {
     "action": {
       "type": "string",
-      "enum": ["none", "comment", "pr"],
+      "enum": [
+        "none",
+        "comment",
+        "pr"
+      ],
       "description": "none: stay silent. comment: post body as a comment. pr: propose a draft pull request, body describing the fix."
     },
     "confidence": {
       "type": "string",
-      "enum": ["low", "medium", "high"]
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ]
     },
     "reason": {
       "type": "string",
@@ -19,6 +34,20 @@
     "body": {
       "type": "string",
       "description": "The public comment (comment) or the fix plan (pr). Empty for none."
+    },
+    "verdict": {
+      "type": "string",
+      "enum": [
+        "merge",
+        "changes",
+        "discuss",
+        "n/a"
+      ],
+      "description": "Pull requests only, for the maintainer only, never posted. merge: ready as is. changes: concrete changes needed first. discuss: a direction call for the maintainer. n/a: not a pull request."
+    },
+    "review": {
+      "type": "string",
+      "description": "Pull requests only, for the maintainer only, never posted: the case for the verdict. Empty for n/a."
     }
   }
 }
