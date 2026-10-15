@@ -1,31 +1,16 @@
 {
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "action",
-    "confidence",
-    "reason",
-    "body",
-    "verdict",
-    "review"
-  ],
+  "required": ["action", "confidence", "reason", "body", "verdict", "review"],
   "properties": {
     "action": {
       "type": "string",
-      "enum": [
-        "none",
-        "comment",
-        "pr"
-      ],
-      "description": "none: stay silent. comment: post body as a comment. pr: propose a draft pull request, body describing the fix."
+      "enum": ["none", "comment", "close", "merge"],
+      "description": "none: nothing to do. comment: post body. close: close the issue or pull request, after posting body when not empty. merge: squash-merge the pull request, after posting body when not empty."
     },
     "confidence": {
       "type": "string",
-      "enum": [
-        "low",
-        "medium",
-        "high"
-      ]
+      "enum": ["low", "medium", "high"]
     },
     "reason": {
       "type": "string",
@@ -33,16 +18,11 @@
     },
     "body": {
       "type": "string",
-      "description": "The public comment (comment) or the fix plan (pr). Empty for none."
+      "description": "The comment the maintainer would post under their name. May be empty for close and merge, empty for none."
     },
     "verdict": {
       "type": "string",
-      "enum": [
-        "merge",
-        "changes",
-        "discuss",
-        "n/a"
-      ],
+      "enum": ["merge", "changes", "discuss", "n/a"],
       "description": "Pull requests only, for the maintainer only, never posted. merge: ready as is. changes: concrete changes needed first. discuss: a direction call for the maintainer. n/a: not a pull request."
     },
     "review": {

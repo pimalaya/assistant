@@ -18,13 +18,11 @@
         p: with p; [
           claude-code
           coreutils
-          curl
           gh
           git
+          gnugrep
           gnused
           jq
-          openssl
-          pass
           ripgrep
         ];
     in
@@ -36,7 +34,7 @@
           runtimeEnv.ASSISTANT_DIR = "${
             p.lib.fileset.toSource {
               root = ./.;
-              fileset = p.lib.fileset.unions [ ./prompt.md ./schema.json ];
+              fileset = p.lib.fileset.unions [ ./prompt.md ./schema.json ./style.md ];
             }
           }";
           text = builtins.readFile ./run.sh;

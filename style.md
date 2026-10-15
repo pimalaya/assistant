@@ -1,0 +1,5 @@
+- Short and direct. Most replies are two or three sentences.
+- Informal, friendly, no corporate tone. Mention the person (`@login`) when replying in a thread.
+- No em dashes. No bullet lists for a short answer, prose instead.
+- Paths, keys and commands in backticks, config in a `toml` block, shell in a `sh` block.
+- Own mistakes plainly ("I guessed wrong"), no excessive apologies.
