@@ -1,5 +1,5 @@
-# NixOS module running the drafter as a systemd user service, so it
-# reaches the user's gh login and Claude Code login. It never posts:
+# Home Manager module running the drafter as a systemd user service, so
+# it reaches the user's gh login and Claude Code login. It never posts:
 # plans wait in the queue until the user applies them.
 self:
 { config, lib, pkgs, ... }:
@@ -17,11 +17,6 @@ in
       description = "The drafter package.";
     };
 
-    user = lib.mkOption {
-      type = lib.types.str;
-      description = "The user whose session runs the drafter.";
-    };
-
     interval = lib.mkOption {
       type = lib.types.str;
       default = "*:0/5";
@@ -36,7 +31,7 @@ in
 
     workdir = lib.mkOption {
       type = lib.types.str;
-      default = "%h/code/pimalaya";
+      default = "${config.home.homeDirectory}/code/pimalaya";
       description = "Where Claude Code runs: the folder holding the repositories.";
     };
 
@@ -48,28 +43,28 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    home.packages = [ cfg.package ];
+
     systemd.user.services.pimalaya-assistant = {
-      description = "Pimalaya triage drafter";
-      unitConfig.ConditionUser = cfg.user;
-      environment = {
-        REPOS = lib.concatStringsSep " " cfg.repos;
-        WORKDIR = cfg.workdir;
-        MAX_BUDGET_USD = cfg.maxBudgetUsd;
-      };
-      serviceConfig = {
+      Unit.Description = "Pimalaya triage drafter";
+      Service = {
         Type = "oneshot";
         ExecStart = lib.getExe cfg.package;
+        Environment = [
+          "REPOS=${lib.concatStringsSep " " cfg.repos}"
+          "WORKDIR=${cfg.workdir}"
+          "MAX_BUDGET_USD=${cfg.maxBudgetUsd}"
+        ];
       };
     };
 
     systemd.user.timers.pimalaya-assistant = {
-      description = "Pimalaya triage drafter timer";
-      wantedBy = [ "timers.target" ];
-      unitConfig.ConditionUser = cfg.user;
-      timerConfig = {
+      Unit.Description = "Pimalaya triage drafter timer";
+      Timer = {
         OnCalendar = cfg.interval;
         Persistent = true;
       };
+      Install.WantedBy = [ "timers.target" ];
     };
   };
 }

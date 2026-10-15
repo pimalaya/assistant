@@ -41,7 +41,7 @@
         };
       });
 
-      nixosModules.default = import ./module.nix self;
+      homeModules.default = import ./module.nix self;
 
       devShells = forAll (p: {
         default = p.mkShell { packages = runtime p ++ [ p.shellcheck ]; };
