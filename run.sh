@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 #
 # Pimalaya triage drafter: prepares an action plan for every issue, pull
-# request and discussion updated since the last run. Each one is handed
-# to Claude Code, which proposes an action as JSON. Nothing is posted:
-# plans wait in the queue until the maintainer applies or rejects them.
+# request and discussion of the pimalaya organization updated since the
+# last run. Each one is handed to Claude Code, which proposes an action
+# as JSON. Nothing is posted: plans wait in the queue until the
+# maintainer applies or rejects them.
 #
 # Usage:
 #   pimalaya-assistant                  one pass over what changed
@@ -16,7 +17,7 @@
 set -euo pipefail
 
 MAINTAINERS="soywod"
-REPOS="${REPOS:-pimalaya/himalaya}"
+ORG="pimalaya"
 LIMIT="${LIMIT:-20}"
 WORKDIR="${WORKDIR:-$HOME/code/pimalaya}"
 CLAUDE="${CLAUDE:-claude}"
@@ -103,16 +104,17 @@ discussion_comments() {
   jq '[.comments.nodes[] | ., .replies.nodes[]] | sort_by(.createdAt) | map({login: (.author.login // "ghost"), body})'
 }
 
-# Lists the open discussions of a repository updated since a date.
+# Lists the open public discussions of the organization updated since a
+# date.
 search_discussions() {
-  local repo=$1 since=$2
+  local since=$1
   # shellcheck disable=SC2016
-  gh api graphql -f q="repo:$repo updated:>=$since" -f query='
+  gh api graphql -f q="org:$ORG is:public updated:>=$since" -f query='
     query($q: String!) {
       search(query: $q, type: DISCUSSION, first: 50) {
-        nodes { ... on Discussion { number url closed updatedAt author { login } } }
+        nodes { ... on Discussion { number url closed updatedAt author { login } repository { nameWithOwner } } }
       }
-    }' --jq '.data.search.nodes[] | select(.closed | not) | {number, url, updatedAt, author: .author.login, kind: "discussion"}'
+    }' --jq '.data.search.nodes[] | select(.closed | not) | {repo: .repository.nameWithOwner, number, url, updatedAt, author: .author.login, kind: "discussion"}'
 }
 
 # Drafts a plan for one item and queues it. A plan doing nothing is
@@ -139,7 +141,7 @@ handle() {
   log "queued $key: $action"
 }
 
-item_json='{number, url: .html_url, updatedAt: .updated_at, author: .user.login, kind: (if .pull_request then "pull request" else "issue" end)}'
+item_json='{repo: (.repository_url | sub("^https://api.github.com/repos/"; "")), number, url: .html_url, updatedAt: .updated_at, author: .user.login, kind: (if .pull_request then "pull request" else "issue" end)}'
 
 # Drafts a plan for one item given as a URL (issue, pull request or
 # discussion), whatever its state.
@@ -244,47 +246,47 @@ poll() {
   since=$(cat "$STATE/last-run" 2>/dev/null || date -u -d '24 hours ago' +%FT%TZ)
   started=$(date -u +%FT%TZ)
 
-  for repo in $REPOS; do
-    items=$(
-      gh api -X GET search/issues \
-        -f q="repo:$repo is:open updated:>=$since" -f per_page=50 \
-        --jq ".items[] | $item_json"
-      search_discussions "$repo" "$since"
-    )
+  items=$(
+    gh api -X GET search/issues --paginate \
+      -f q="org:$ORG is:public is:open updated:>=$since" \
+      -f sort=updated -f order=asc -f per_page=100 \
+      --jq ".items[] | $item_json"
+    search_discussions "$since"
+  )
 
-    while read -r item; do
-      [[ -z "$item" ]] && continue
-      if ((count >= LIMIT)); then
-        log "limit $LIMIT reached, next run resumes from the same date"
-        truncated=1
-        break 2
-      fi
+  while read -r item; do
+    [[ -z "$item" ]] && continue
+    if ((count >= LIMIT)); then
+      log "limit $LIMIT reached, next run resumes from the same date"
+      truncated=1
+      break
+    fi
 
-      number=$(jq -r .number <<<"$item")
-      url=$(jq -r .url <<<"$item")
-      author=$(jq -r .author <<<"$item")
-      kind=$(jq -r .kind <<<"$item")
-      updated=$(jq -r .updatedAt <<<"$item")
-      key=$(key_of "$repo" "$number")
+    repo=$(jq -r .repo <<<"$item")
+    number=$(jq -r .number <<<"$item")
+    url=$(jq -r .url <<<"$item")
+    author=$(jq -r .author <<<"$item")
+    kind=$(jq -r .kind <<<"$item")
+    updated=$(jq -r .updatedAt <<<"$item")
+    key=$(key_of "$repo" "$number")
 
-      if [[ "$kind" == discussion ]]; then
-        context=$(fetch_discussion "$repo" "$number")
-        comments=$(discussion_comments <<<"$context")
-      else
-        context=""
-        comments=$(gh api "repos/$repo/issues/$number/comments" --paginate \
-          --jq '[.[] | {login: .user.login, body: .body}]' | jq -s 'add // []')
-      fi
+    if [[ "$kind" == discussion ]]; then
+      context=$(fetch_discussion "$repo" "$number")
+      comments=$(discussion_comments <<<"$context")
+    else
+      context=""
+      comments=$(gh api "repos/$repo/issues/$number/comments" --paginate \
+        --jq '[.[] | {login: .user.login, body: .body}]' | jq -s 'add // []')
+    fi
 
-      if ! should_look "$author" "$comments" "$key" "$updated"; then
-        log "skip $url"
-        continue
-      fi
+    if ! should_look "$author" "$comments" "$key" "$updated"; then
+      log "skip $url"
+      continue
+    fi
 
-      count=$((count + 1))
-      handle "$repo" "$number" "$url" "$kind" "$updated" "$context"
-    done < <(jq -c . <<<"$items")
-  done
+    count=$((count + 1))
+    handle "$repo" "$number" "$url" "$kind" "$updated" "$context"
+  done < <(jq -c . <<<"$items")
 
   if [[ $truncated == 0 ]]; then
     echo "$started" >"$STATE/last-run"

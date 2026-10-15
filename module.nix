@@ -23,12 +23,6 @@ in
       description = "When to run, as a systemd OnCalendar expression.";
     };
 
-    repos = lib.mkOption {
-      type = lib.types.listOf lib.types.str;
-      default = [ "pimalaya/himalaya" ];
-      description = "The repositories to watch, as owner/name.";
-    };
-
     workdir = lib.mkOption {
       type = lib.types.str;
       default = "${config.home.homeDirectory}/code/pimalaya";
@@ -51,7 +45,6 @@ in
         Type = "oneshot";
         ExecStart = lib.getExe cfg.package;
         Environment = [
-          "REPOS=${lib.concatStringsSep " " cfg.repos}"
           "WORKDIR=${cfg.workdir}"
           "MAX_BUDGET_USD=${cfg.maxBudgetUsd}"
         ];
